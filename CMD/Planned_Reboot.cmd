@@ -1,0 +1,1 @@
+at 23:00 shutdown /r /t 60 /d p:0:0 /c "Planned reboot"
