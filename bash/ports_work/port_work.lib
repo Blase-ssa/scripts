@@ -1,0 +1,142 @@
+# bash library for scripts in this directory.
+
+## defaults for TCP_PING function
+TIMEOUT="5s"	# Timeout for connection
+PROTOCOL="tcp"	# Protocol. Should be 'tcp' or 'udp'
+ADDR='127.0.0.1'
+Port=80			# stub for port
+## defaults for get_date function
+TIMESTAMP="seconds"
+
+TCP_PING(){
+    ## Function to check port availability. Without using nmap or nc.
+    ## Required Variables:
+    ##      TIMEOUT - Timeout for connection
+    ##                  Timeout is a floating point number with an optional suffix: 's' for seconds (the default), 'm'  for
+	##	                minutes, 'h' for hours or 'd' for days.  A duration of 0 disables the associated timeout.
+    ##      PROTOCOL- Protocol. Should be 'tcp' or 'udp'.
+    ##      ADDR    - Target address. Cab be an IP or a DNS name.
+    ##      Port    - Target port to check.
+	timeout ${TIMEOUT} bash -c "(echo >/dev/${PROTOCOL}/${ADDR}/${Port}) &>/dev/null && exit 0 || exit 1"
+	echo $?
+}
+
+get_date(){
+    ## A function for getting the date and time, so as not to bother with the date command every time.
+    ## Required Variables:
+    ##      TIMESTAMP - Valid values arw 'date', 'seconds' or 'ns' for nanoseconds.
+	date --rfc-3339=${TIMESTAMP}
+}
+
+CHECK_PROTOCOL(){
+    ## Function to check protocol, should be 'tcp' or 'udp'
+    ## Required Variables:
+    ##      PROTOCOL- Protocol. Should be 'tcp' or 'udp'.
+
+    ### make PROTOCOL case insensitive
+    PROTOCOL=$(echo "${PROTOCOL}" |tr [:upper:] [:lower:])
+    ### Checking that the protocol is equal to one of the 2 supported ones.
+    if [[ $PROTOCOL != 'tcp' ]] && [[ $PROTOCOL != "udp" ]]; then
+        echo "$PROTOCOL - unsupported protocol. Should be 'tcp' or 'udp'."
+        echo "Run \"$0 -h\" - to get help"
+        exit 1
+    fi
+}
+
+CHECK_PORT_2B_INT(){
+    ## Function to check port to be a number 
+    ## Required Variables:
+    ##      Port - number betwean 0 and 65536
+    if ! [[ "$Port" =~ ^[0-9]+$ ]]; then
+        return 1
+    fi
+    if (( 0 < $Port < 65536 )); then
+        return 0
+    else
+        return 1
+    fi
+}
+
+CHECK_ADDR_DNS(){
+    ## A primitive function that checks that the address contains a dot and letters after the dot.
+    ## Required Variables:
+    ##      ADDR
+    if [[ $(echo "${ADDR}"| grep -Pc '\.\w+') -gt 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+CHECK_ADDR_IP(){
+    ## A simple function checks that the ADDR variable contains a sequence similar to an IP address.
+    ## Required Variables:
+    ##      ADDR
+    if [[ $(echo "${ADDR}"| grep -Pc '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') -gt 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+CHECK_ADDR_IP_RANGE(){
+    ## A simple function checks that the ADDR variable contains a sequence similar to an IP address range.
+    ## Required Variables:
+    ##      ADDR
+    if [[ $(echo "${ADDR}"| grep -Pc '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') -gt 0 ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+GET_IP_RANGE(){
+    IP_RANGE_START=$(echo $ADDR | grep -Po "^\d+\.\d+\.\d+\.\d+")
+	IP_RANGE_END=$(echo $ADDR | grep -Po "\d+\.\d+\.\d+\.\d+$")
+    IFS='.'
+    read -ra IP_OCTETS_1 <<< "$IP_RANGE_START"
+    read -ra IP_OCTETS_2 <<< "$IP_RANGE_END"
+
+    for (( i_O0 = ${IP_OCTETS_1[0]}; i_O0 <= ${IP_OCTETS_2[0]}; i_O0 += 1 )); do
+        if [[ $i_O0 == ${IP_OCTETS_2[0]} ]]; then 
+            i_lim_1=${IP_OCTETS_2[1]};
+        else
+            i_lim_1=255
+        fi
+        if [[ $i_O0 == ${IP_OCTETS_1[0]} ]]; then
+            i_start_1=${IP_OCTETS_1[1]}
+        else
+            i_start_1=0
+        fi
+    for (( i_O1 = i_start_1; i_O1 <= i_lim_1; i_O1 += 1 )); do
+        if [[ $i_O1 == ${IP_OCTETS_2[1]} ]]; then 
+            i_lim_2=${IP_OCTETS_2[2]};
+        else
+            i_lim_2=255
+        fi
+        if [[ $i_O1 == ${IP_OCTETS_1[1]} ]]; then
+            i_start_2=${IP_OCTETS_1[2]}
+        else
+            i_start_2=0
+        fi
+    for (( i_O2 = i_start_2; i_O2 <= i_lim_2; i_O2 += 1 )); do
+        if [[ $i_O2 == ${IP_OCTETS_2[2]} ]]; then 
+            i_lim_3=${IP_OCTETS_2[3]};
+        else
+            i_lim_3=254
+        fi
+        if [[ $i_O2 == ${IP_OCTETS_1[2]} ]]; then
+            i_start_3=${IP_OCTETS_1[3]}
+        else
+            i_start_3=0
+        fi
+    for (( i_O3 = i_start_3; i_O3 <= i_lim_3; i_O3 += 1 )); do
+                    if (( $i_O3 > 254 )); then break; fi
+                    echo "${i_O0}.${i_O1}.${i_O2}.${i_O3}"
+                done
+            done
+        done
+    done
+
+
+}

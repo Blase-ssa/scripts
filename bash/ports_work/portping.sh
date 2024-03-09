@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 ####################################
-# simple tcp ping script
+# A simple port availability check script.
 # use `./tcpping.sh -h` to get help
 ####################################
 
 # Uncomment the string below to print every shell command before execute it.
 # set -x
 
-## help
+## help function
 PRINT_HELP(){
-	echo "Simple TCP Ping script
+	echo "A simple port availability check script.
 
 Usage:
 	$0 <options> <IP> <Port>
@@ -83,34 +83,22 @@ But I got a little carried away and wrote this script.
 "
 }
 
+# include port_work library
+source $(dirname "$0")/port_work.lib
+
 ## defaults
 AC=1			# Count of attempts
 F=0				# Infinity nember of attempts
 W=0				# Ping until success
 STIME=5			# Time in seconds between attempts
-TIMEOUT="5s"	# Timeout for connection
-ADDR='127.0.0.1'
-Port=80			# stub for port
-PROTOCOL="tcp"	# Protocol. Should be 'tcp' or 'udp'
 TIMESTAMP=0		# Timestamp format. Default = no timestamp
 verbose=0
 ## other variables
 args=("$@")
-perform=true
 loop_count=0
 check_fail_count=0
 check_success_count=0
 start_date=0
-
-## functions
-get_date(){
-	date --rfc-3339=${TIMESTAMP}
-}
-
-TCP_PING(){
-	timeout ${TIMEOUT} bash -c "(echo >/dev/${PROTOCOL}/${ADDR}/${Port}) &>/dev/null && exit 0 || exit 1"
-	echo $?
-}
 
 ## Main
 ### Print help and exit
@@ -146,32 +134,24 @@ done
 if [[ $TIMESTAMP != 0 ]]; then start_date=$(get_date); fi
 if [[ $W == 1 ]] && [[ $AC == 1 ]]; then F=1; fi
 
+Port=${args[-1]}
+ADDR=${args[-2]}
+
 ### Check for errors
-if !([[ $PROTOCOL -eq 'tcp' ]] || [[ $PROTOCOL -eq "udp" ]]); then
-	echo "$PROTOCOL - unsupported protocol"
-	PRINT_HELP
-	exit 1
-fi
-### Analysis of required arguments.
-#### check port
-if [[ ${args[-1]} -gt 0 ]]; then
-	Port=${args[-1]}
-else
-	echo "Port (\"${args[-1]}\") is not integer"
-	PRINT_HELP
+CHECK_PROTOCOL
+if !(CHECK_PORT_2B_INT); then
+	echo "Port (\"${Port}\") is not integer."
+	echo "Or out of the range 0 < Port < 65536."
+	echo "Run \"$0 -h\" - to get help"
 	exit 1
 fi
 #### ckek address
-if [[ $(echo "${args[-2]}"| grep -c '.') -gt 0 ]]; then
-	ADDR=${args[-2]}
-else
-	echo "Address should be IP or FQDN (\"${args[-1]}\")"
-	PRINT_HELP
-	exit 1
+if !(CHECK_ADDR_DNS) || !(CHECK_ADDR_IP); then
+	echo "Address should be IP or DNS name. (\"${ADDR}\")"
+	echo "Run \"$0 -h\" - to get help"
 fi
 
-### check port
-while $perform; do
+while true; do
 	((loop_count+=1))
 	if [[ $TIMESTAMP != 0 ]]; then
 		echo -ne "$(get_date):  "
