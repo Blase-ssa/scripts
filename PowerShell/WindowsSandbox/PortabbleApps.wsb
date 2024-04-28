@@ -1,0 +1,28 @@
+<Configuration>
+    <!-- <vGPU>Enable</vGPU> -->
+    <MemoryInMB>8196</MemoryInMB>
+    <MappedFolders>
+      <MappedFolder>
+        <HostFolder>C:\Users\SSilantev\Downloads</HostFolder>
+        <SandboxFolder>C:\Users\WDAGUtilityAccount\Downloads</SandboxFolder>
+        <ReadOnly>false</ReadOnly>
+      </MappedFolder>
+      <MappedFolder>
+        <HostFolder>D:\</HostFolder>
+        <SandboxFolder>C:\D</SandboxFolder>
+        <ReadOnly>false</ReadOnly>
+      </MappedFolder>
+       <MappedFolder>
+        <HostFolder>C:\Music</HostFolder>
+        <SandboxFolder>C:\D\Documents\Music</SandboxFolder>
+        <ReadOnly>false</ReadOnly>
+      </MappedFolder>
+    </MappedFolders>
+    <ClipboardRedirection>Enable</ClipboardRedirection>
+    <PrinterRedirection>Enable</PrinterRedirection>
+    <LogonCommand>
+      <Command>powershell.exe -ExecutionPolicy Bypass -File C:\D\WindowsSandbox\settings.ps1</Command>
+      <!-- <Command>powershell -Command "Set-WinUserLanguageList -Force 'ru'"</Command> -->
+      <!-- <Command>C:\D\Start.exe</Command> -->
+    </LogonCommand>
+</Configuration>
