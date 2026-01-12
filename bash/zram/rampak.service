@@ -1,0 +1,8 @@
+[Unit]
+Description=RAM Compression
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rampak.sh
+[Install]
+WantedBy=multi-user.target

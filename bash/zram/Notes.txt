@@ -1,0 +1,110 @@
+sudo su -
+modprobe zram
+zramctl --find --size=3G
+mkswap /dev/zram0
+swapon /dev/zram0
+This command sequence does the following things:
+1. Elevates your privileges to root. This allows you to run anything as admin. You will be asked for a password.
+2. Enables compressed RAM disk support.
+3. Creates a 3 GB compressed RAM disk. Note that the RAM disk won’t actually take all of this space you give it when you create it, and it almost certainly won’t take up anywhere near that much space even when it’s packed full.
+4. Sets up the RAM disk to act as a swapfile.
+5. Tells Linux to use the RAM disk as a swapfile.
+Note that this assumes that you’re not already using ZRAM devices for anything else. Also, this command sequence is for a system with 4 GB of RAM - you should adjust the zramctl line for your system. I usually set it to make a RAM disk that’s 1 GB smaller than my total RAM, so on a 2 GB machine, it would be zramctl --find --size=1G, while a 16 GB system would use zramctl --find --size=15G.
+That’s it! Your system is now compressing RAM, and you should immediately benefit from the extra memory.
+The downside with this approach is that you have to repeat the process every time you boot or reboot your computer. This might not be so bad… if you can remember to do it every time it’s needed. Sadly, I’ve learned the hard way that human memory isn’t reliable here - I’ve forgotten to enable RAM compression many times, and had my systems run out of RAM or nearly run out of RAM many times as a result. So if you’re just trying out RAM compression, this works, but if you intend to rely on it to make your system more usable, you should probably set up your system to enable RAM compression every time you boot up. That’s what the next section covers.
+The permanent way
+If you decide you like what RAM compression does for your system, you can use systemd to automatically enable RAM compression when the computer boots up. The way I do this involves making a Bash script and a systemd unit.
+First, pop open a terminal window with Ctrl+Alt+T. Next, type ls /usr/local/bin/rampak.sh; ls /etc/systemd/system/rampak.service. This command should return two “No such file or directory” error messages. If so, then we know it’s safe to create the files for enabling RAM compression.
+Next, type sudo su - to gain admin privileges. You will be asked for your password when you do this. Once you’re in, type nano /usr/local/bin/rampak.sh. This will open up a text editor in your terminal, where you can create the Bash script for enabling RAM compression.
+The Bash script looks like this:
+
+#! /bin/bash
+modprobe zram
+sleep 1
+zramctl --find --size=3G
+mkswap /dev/zram0
+swapon /dev/zram0
+Note the new sleep 1 line - this is important, the script won’t work without it. I’m guessing this is because the modprobe zram command “finishes” before the module is fully ready for use. Adding the 1-second sleep makes everything work on my test system. Again, you should modify the zramctl line if your system is using less than 4 GB of RAM, and if you’re already using compressed RAM disks.
+Type the above script into the terminal, then press Ctrl+S. This will save the script in your system. Finally, press Ctrl+X to exit.
+Now that the script is made, it needs to be marked as executable. NOTE: This step is very important - if you miss it, RAM compression will not work. To mark the script as executable, run chmod +x /usr/local/bin/rampak.sh. The script will now be recognized as an executable program.
+The next step is to make the systemd unit. Type nano /etc/systemd/system/rampak.service. Once nano is open, type in the following code:
+
+[Unit]
+Description=RAM Compression
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rampak.sh
+[Install]
+WantedBy=multi-user.target
+Press Ctrl+S, then Ctrl+X to save the file and close nano.
+Now we need to enable the systemd unit we just made. To do that, run systemctl enable rampak.service. Finally, reboot and see if it’s working!
+Once your system has booted up, open htop to see if you have more swap space than before. If so, congratulations! You have finished setting up RAM compression!
+The quick and permanent way
+If you decide you’d like RAM compression on your system at all times, but you don’t want to trudge through the steps above, here’s a script you can use to automatically set the whole thing up for you::
+
+#! /bin/bash
+sudo tee /usr/local/bin/rampak.sh << EOF > /dev/null
+#! /bin/bash
+modprobe zram
+sleep 1
+zramctl --find --size=3G
+mkswap /dev/zram0
+swapon /dev/zram0
+EOF
+sudo chmod +x /usr/local/bin/rampak.sh
+sudo tee /etc/systemd/system/rampak.service << EOF > /dev/null
+[Unit]
+Description=RAM Compression
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rampak.sh
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl enable rampak.service
+Note that this script assumes that neither /usr/local/bin/rampak.sh or /etc/systemd/system/rampak.service exist already, so if for some reason these files already exist on your system, this probably won’t go as planned. You can test if these files already exist on your system by opening a terminal with Ctrl+Alt+T, and typing ls /usr/local/bin/rampak.sh; ls /etc/systemd/system/rampak.service in a terminal. If you get two “No such file or directory” errors when you do this, the files don’t exist and you’re good to go!
+Also, this script is designed for systems with 4 GB of RAM - adjust the zramctl line as necessary for your system.
+Copy this script into a text file, and save it as “rampakinst.sh”. Right-click on the script, click on “Properties”, and select the “Permissions” tab. Check the “Make this file executable” box, and click OK. Finally, double-click on the script, and click “Execute in terminal” in the pop-up window. You will be asked for your password once. Once the script finishes, reboot, and you’re done! Make sure to use htop to check and make sure everything went as planned.
+Final notes
+It might be safe to make a ZRAM device larger than your system’s physical RAM, but I don’t know for sure. My own testing was inconclusive. Personally, I’d err on the side of caution and leave that 1 GB uncompressed breathing room to make sure that nothing goes weird, but if you like living dangerously or know better than I do, you might be able to squeeze even more power out of your RAM with this trick.
+If you’re already using ZRAM devices for some purpose, you may need to change these scripts or your own scripts or config files so that your RAM compression and other ZRAM use don’t conflict. If you’re in this scenario, you probably already know what to tweak to make everything work for you.
+Conclusion
+RAM compression is a powerful technique for squeezing more power out of lightweight systems and getting the most out of powerful systems, and it’s quite easy to set up. If you’re using a system with less than 8 GB of RAM, and aren’t using a swapfile, RAM compression may solve your low-RAM woes.
+I hope this was helpful! Have a nice day.
+
+From <https://discourse.lubuntu.me/t/enabling-ram-compression-on-lubuntu/3323/1> 
+
+
+My configuration
+sudo nano /usr/local/bin/rampak.sh
+#! /bin/bash
+modprobe zram
+sleep 1
+zramctl --find --size=500M --streams 2 --algorithm zstd
+mkswap /dev/zram0
+swapon /dev/zram0
+
+sudo nano /etc/systemd/system/rampak.service
+[Unit]
+Description=RAM Compression
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/rampak.sh
+[Install]
+WantedBy=multi-user.target
+
+sudo chmod a+x /usr/local/bin/rampak.sh
+sudo systemctl enable rampak.service
+
+
+# swapfile
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+sudo swapon --show
+
