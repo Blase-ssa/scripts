@@ -28,7 +28,7 @@ iteration=0
 echo "Choose a server:"
 for srv_str in "${srv_list[@]}"; do
         echo "${iteration}) $srv_str"
-        iteration=$(expr $iteration + 1)
+        iteration=$(( $iteration + 1))
         #for i in ${srv_str[@]}; do
         #       echo $i
         #done
